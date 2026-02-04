@@ -196,6 +196,9 @@ let rec remapTypeAux (tyenv: Remap) (ty: TType) =
       if anonInfo.TupInfo === tupInfoR && l === lR then ty else  
       TType_anon (AnonRecdTypeInfo.Create(anonInfo.Assembly, tupInfoR, anonInfo.SortedIds), lR)
 
+  // TODO: Anonymous type-tagged union
+  | TType_anon_tt_union (_, _) -> failwith "Anonymous type-tagged unions not implemented yet"
+
   | TType_tuple (tupInfo, l) as ty -> 
       let tupInfoR = remapTupInfoAux tyenv tupInfo
       let lR = remapTypesAux tyenv l
@@ -1202,6 +1205,9 @@ let rec getErasedTypes g ty checkForNullness =
 
     | TType_ucase(_, b) | TType_anon (_, b) | TType_tuple (_, b) ->
         List.foldBack (fun ty tys -> getErasedTypes g ty false @ tys) b []
+
+    // TODO: Anonymous type-tagged union
+    | TType_anon_tt_union (_, _) -> failwith "Anonymous type-tagged unions not implemented yet"
 
     | TType_fun (domainTy, rangeTy, nullness) -> 
         match checkForNullness, nullness.Evaluate() with
@@ -2425,6 +2431,9 @@ and accFreeInType opts ty acc =
     | TType_anon (anonInfo, l) ->
         accFreeInTypes opts l (accFreeInTupInfo opts anonInfo.TupInfo acc)
 
+    // TODO: Anonymous type-tagged union
+    | TType_anon_tt_union (_, _) -> failwith "Anonymous type-tagged unions not implemented yet"
+    
     | TType_app (tcref, tinst, _) -> 
         let acc = accFreeTycon opts tcref acc
         match tinst with 
@@ -2533,6 +2542,9 @@ and accFreeInTypeLeftToRight g cxFlag thruFlag acc ty =
     | TType_anon (anonInfo, anonTys) ->
         let acc = accFreeInTupInfoLeftToRight g cxFlag thruFlag acc anonInfo.TupInfo 
         accFreeInTypesLeftToRight g cxFlag thruFlag acc anonTys 
+
+    // TODO: Anonymous type-tagged union
+    | TType_anon_tt_union (_, _) -> failwith "Anonymous type-tagged unions not implemented yet"
 
     | TType_tuple (tupInfo, tupTys) -> 
         let acc = accFreeInTupInfoLeftToRight g cxFlag thruFlag acc tupInfo 
@@ -3101,6 +3113,9 @@ module SimplifyTypes =
         | TType_anon (_, tys) 
         | TType_tuple (_, tys) ->
             List.fold (foldTypeButNotConstraints f) z tys
+
+        // TODO: Anonymous type-tagged union
+        | TType_anon_tt_union (_, _) -> failwith "Anonymous type-tagged unions not implemented yet"
 
         | TType_fun (domainTy, rangeTy, _) ->
             foldTypeButNotConstraints f (foldTypeButNotConstraints f z domainTy) rangeTy
@@ -4163,6 +4178,9 @@ module DebugPrint =
 
         | TType_anon (anonInfo, tys) ->
            braceBarL (sepListL (wordL (tagText ";")) (List.map2 (fun nm ty -> wordL (tagField nm) --- auxTypeAtomL env ty) (Array.toList anonInfo.SortedNames) tys))
+
+        // TODO: Anonymous type-tagged union
+        | TType_anon_tt_union (_, _) -> failwith "Anonymous type-tagged unions not implemented yet"
 
         | TType_measure unt ->
 #if DEBUG
@@ -9028,6 +9046,9 @@ let rec typeEnc g (gtpsType, gtpsMethod) ty =
     | TType_anon (anonInfo, tinst) -> 
         sprintf "%s%s" anonInfo.ILTypeRef.FullName (tyargsEnc g (gtpsType, gtpsMethod) tinst)
 
+    // TODO: Anonymous type-tagged union
+    | TType_anon_tt_union (_, _) -> failwith "Anonymous type-tagged unions not implemented yet"
+
     | TType_tuple (tupInfo, tys) -> 
         if evalTupInfoIsStruct tupInfo then 
             sprintf "System.ValueTuple%s"(tyargsEnc g (gtpsType, gtpsMethod) tys)
@@ -9289,6 +9310,10 @@ let GetDisallowedNullness (g:TcGlobals) (ty:TType) =
             | TType_anon (tys=tys) -> 
                 let inner = tys |> List.collect (fun t -> hasWithNullAnyWhere t false)
                 if alreadyWrappedInOuterWithNull then ty :: inner else inner
+
+            // TODO: Anonymous type-tagged union
+            | TType_anon_tt_union (_, _) -> failwith "Anonymous type-tagged unions not implemented yet"
+
             | TType_fun (d, r, _) ->
                 (hasWithNullAnyWhere d false) @ (hasWithNullAnyWhere r false)
 

@@ -277,6 +277,9 @@ let tryAddNullnessToTy nullnessNew (ty:TType) =
             Some ty
         else 
             Some (TType_fun (d, r, nullnessAfter))
+
+    // TODO: Anonymous type-tagged union
+    | TType_anon_tt_union (_, _) -> failwith "Anonymous type-tagged unions not implemented yet"
     | TType_forall _ -> None
     | TType_measure _ -> None
 

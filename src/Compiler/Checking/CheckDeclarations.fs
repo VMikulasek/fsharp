@@ -3834,6 +3834,8 @@ module EstablishTypeDefinitionCores =
                     else 
                         acc
 
+                // TODO: Anonymous type-tagged union
+                | TType_anon_tt_union (_, _) -> failwith "Anonymous type-tagged unions not implemented yet"
                 | TType_fun (domainTy, rangeTy, _) -> 
                     accInAbbrevType domainTy (accInAbbrevType rangeTy acc)
                 

@@ -384,6 +384,9 @@ let rec CheckTypeDeep (cenv: cenv) (visitTy, visitTyconRefOpt, visitAppTyOpt, vi
 
     | TType_measure _ -> ()
 
+    // TODO: Anonymous type-tagged union
+    | TType_anon_tt_union (_, _) -> failwith "Anonymous type-tagged unions not implemented yet"
+    
     | TType_app (tcref, tinst, _) ->
         match visitTyconRefOpt with
         | Some visitTyconRef -> visitTyconRef typeInstParentOpt tcref
