@@ -190,14 +190,17 @@ let rec remapTypeAux (tyenv: Remap) (ty: TType) =
       | Some tcrefR -> TType_ucase (UnionCaseRef(tcrefR, n), remapTypesAux tyenv tinst)
       | None -> TType_ucase (UnionCaseRef(tcref, n), remapTypesAux tyenv tinst)
 
+  // Remap single disjoint?
+  | TType_anon_tt_union (_, l) as ty ->
+      match l with
+      | [singleCase] -> singleCase
+      | _ -> ty
+
   | TType_anon (anonInfo, l) as ty -> 
       let tupInfoR = remapTupInfoAux tyenv anonInfo.TupInfo
       let lR = remapTypesAux tyenv l
       if anonInfo.TupInfo === tupInfoR && l === lR then ty else  
       TType_anon (AnonRecdTypeInfo.Create(anonInfo.Assembly, tupInfoR, anonInfo.SortedIds), lR)
-
-  // TODO: Anonymous type-tagged union
-  | TType_anon_tt_union (_, _) -> failwith "Anonymous type-tagged unions not implemented yet"
 
   | TType_tuple (tupInfo, l) as ty -> 
       let tupInfoR = remapTupInfoAux tyenv tupInfo
@@ -813,6 +816,9 @@ let rec stripTyEqnsAndErase eraseFuncAndTuple (g: TcGlobals) ty =
     | TType_tuple(tupInfo, l) when eraseFuncAndTuple ->
         mkCompiledTupleTy g (evalTupInfoIsStruct tupInfo) l
 
+    | TType_anon_tt_union(unionInfo, _) ->
+        stripTyEqnsAndErase eraseFuncAndTuple g unionInfo.CommonAncestorTy
+
     | ty -> ty
 
 let stripTyEqnsAndMeasureEqns g ty =
@@ -880,6 +886,8 @@ let isFSharpStructOrEnumTy g ty = ty |> stripTyEqns g |> (function TType_app(tcr
 
 let isFSharpEnumTy g ty = ty |> stripTyEqns g |> (function TType_app(tcref, _, _) -> tcref.IsFSharpEnumTycon | _ -> false)
 
+let isAnonTtUnionTy g ty = ty |> stripTyEqns g |> (function TType_anon_tt_union _ -> true | _ -> false)
+
 let isTyparTy g ty = ty |> stripTyEqns g |> (function TType_var _ -> true | _ -> false)
 
 let isAnyParTy g ty = ty |> stripTyEqns g |> (function TType_var _ -> true | TType_measure unt -> isUnitParMeasure g unt | _ -> false)
@@ -922,6 +930,20 @@ let (|RefTupleTy|_|) g ty = ty |> stripTyEqns g |> (function TType_tuple(tupInfo
 
 [<return: Struct>]
 let (|FunTy|_|) g ty = ty |> stripTyEqns g |> (function TType_fun(domainTy, rangeTy, _) -> ValueSome (domainTy, rangeTy) | _ -> ValueNone)
+
+let tryUnsortedAnonTtUnionTyCases g ty =
+    let ty = ty |> stripTyEqns g
+    match ty with
+    | TType_anon_tt_union (unionInfo, tys) ->
+        let sigma = unionInfo.UnsortedCaseSourceIndices
+        let unsortedTyps =
+            tys
+            |> List.indexed
+            |> List.sortBy (fun (sortedIdx, _) -> sigma.[sortedIdx])
+            |> List.map snd
+
+        ValueSome (unsortedTyps)
+    | _ -> ValueNone
 
 let tryNiceEntityRefOfTy ty = 
     let ty = stripTyparEqnsAux KnownWithoutNull false ty 
@@ -1125,6 +1147,9 @@ and typeAEquivAux erasureFlag g aenv ty1 ty2 =
         | EraseNone -> measureAEquiv g aenv m1 m2 
         | _ -> true 
 
+    | TType_anon_tt_union (_, l1), TType_anon_tt_union (_, l2) ->
+        ListSet.equals (typeAEquivAux erasureFlag g aenv) l1 l2
+
     | _ -> false
 
 and anonInfoEquiv (anonInfo1: AnonRecdTypeInfo) (anonInfo2: AnonRecdTypeInfo) =
@@ -1203,11 +1228,11 @@ let rec getErasedTypes g ty checkForNullness =
         | true, NullnessInfo.WithNull -> [ty]
         | _ -> List.foldBack (fun ty tys -> getErasedTypes g ty false @ tys) b []
 
-    | TType_ucase(_, b) | TType_anon (_, b) | TType_tuple (_, b) ->
+    | TType_ucase(_, b)
+    | TType_anon (_, b)
+    | TType_tuple (_, b)
+    | TType_anon_tt_union (_, b) ->
         List.foldBack (fun ty tys -> getErasedTypes g ty false @ tys) b []
-
-    // TODO: Anonymous type-tagged union
-    | TType_anon_tt_union (_, _) -> failwith "Anonymous type-tagged unions not implemented yet"
 
     | TType_fun (domainTy, rangeTy, nullness) -> 
         match checkForNullness, nullness.Evaluate() with
@@ -2050,7 +2075,8 @@ let isRefTy g ty =
         isReprHiddenTy g ty || 
         isFSharpObjModelRefTy g ty || 
         isUnitTy g ty ||
-        (isAnonRecdTy g ty && not (isStructAnonRecdTy g ty))
+        (isAnonRecdTy g ty && not (isStructAnonRecdTy g ty)) ||
+        isAnonTtUnionTy g ty
     )
 
 let isForallFunctionTy g ty =
@@ -2431,8 +2457,8 @@ and accFreeInType opts ty acc =
     | TType_anon (anonInfo, l) ->
         accFreeInTypes opts l (accFreeInTupInfo opts anonInfo.TupInfo acc)
 
-    // TODO: Anonymous type-tagged union
-    | TType_anon_tt_union (_, _) -> failwith "Anonymous type-tagged unions not implemented yet"
+    | TType_anon_tt_union (_, l) ->
+        accFreeInTypes opts l acc
     
     | TType_app (tcref, tinst, _) -> 
         let acc = accFreeTycon opts tcref acc
@@ -2543,9 +2569,6 @@ and accFreeInTypeLeftToRight g cxFlag thruFlag acc ty =
         let acc = accFreeInTupInfoLeftToRight g cxFlag thruFlag acc anonInfo.TupInfo 
         accFreeInTypesLeftToRight g cxFlag thruFlag acc anonTys 
 
-    // TODO: Anonymous type-tagged union
-    | TType_anon_tt_union (_, _) -> failwith "Anonymous type-tagged unions not implemented yet"
-
     | TType_tuple (tupInfo, tupTys) -> 
         let acc = accFreeInTupInfoLeftToRight g cxFlag thruFlag acc tupInfo 
         accFreeInTypesLeftToRight g cxFlag thruFlag acc tupTys 
@@ -2555,6 +2578,9 @@ and accFreeInTypeLeftToRight g cxFlag thruFlag acc ty =
 
     | TType_ucase (_, tinst) -> 
         accFreeInTypesLeftToRight g cxFlag thruFlag acc tinst 
+
+    | TType_anon_tt_union (_, tinst) ->
+        accFreeInTypesLeftToRight g cxFlag thruFlag acc tinst
 
     | TType_fun (domainTy, rangeTy, _) -> 
         let dacc = accFreeInTypeLeftToRight g cxFlag thruFlag acc domainTy 
@@ -3111,11 +3137,9 @@ module SimplifyTypes =
         | TType_app (_, tys, _) 
         | TType_ucase (_, tys) 
         | TType_anon (_, tys) 
+        | TType_anon_tt_union (_, tys)
         | TType_tuple (_, tys) ->
             List.fold (foldTypeButNotConstraints f) z tys
-
-        // TODO: Anonymous type-tagged union
-        | TType_anon_tt_union (_, _) -> failwith "Anonymous type-tagged unions not implemented yet"
 
         | TType_fun (domainTy, rangeTy, _) ->
             foldTypeButNotConstraints f (foldTypeButNotConstraints f z domainTy) rangeTy
@@ -4168,6 +4192,9 @@ module DebugPrint =
         | TType_tuple (_tupInfo, tys) ->
             sepListL (wordL (tagText "*")) (List.map (auxTypeAtomL env) tys) |> wrap
 
+        | TType_anon_tt_union (_, tys) ->
+            leftL (tagText "(") ^^ sepListL (wordL (tagText "|")) (List.map (auxTypeAtomL env) tys) ^^ rightL (tagText ")")
+
         | TType_fun (domainTy, rangeTy, nullness) ->
            let coreL = ((auxTypeAtomL env domainTy ^^ wordL (tagText "->")) --- auxTypeL env rangeTy)  |> wrap
            auxAddNullness coreL nullness
@@ -4178,9 +4205,6 @@ module DebugPrint =
 
         | TType_anon (anonInfo, tys) ->
            braceBarL (sepListL (wordL (tagText ";")) (List.map2 (fun nm ty -> wordL (tagField nm) --- auxTypeAtomL env ty) (Array.toList anonInfo.SortedNames) tys))
-
-        // TODO: Anonymous type-tagged union
-        | TType_anon_tt_union (_, _) -> failwith "Anonymous type-tagged unions not implemented yet"
 
         | TType_measure unt ->
 #if DEBUG
@@ -9046,9 +9070,6 @@ let rec typeEnc g (gtpsType, gtpsMethod) ty =
     | TType_anon (anonInfo, tinst) -> 
         sprintf "%s%s" anonInfo.ILTypeRef.FullName (tyargsEnc g (gtpsType, gtpsMethod) tinst)
 
-    // TODO: Anonymous type-tagged union
-    | TType_anon_tt_union (_, _) -> failwith "Anonymous type-tagged unions not implemented yet"
-
     | TType_tuple (tupInfo, tys) -> 
         if evalTupInfoIsStruct tupInfo then 
             sprintf "System.ValueTuple%s"(tyargsEnc g (gtpsType, gtpsMethod) tys)
@@ -9062,6 +9083,8 @@ let rec typeEnc g (gtpsType, gtpsMethod) ty =
         typarEnc g (gtpsType, gtpsMethod) typar
 
     | TType_measure _ -> "?"
+
+    | TType_anon_tt_union (_, _) -> failwith "unreachable" // always erased by stripTyEqnsAndMeasureEqns
 
 and tyargsEnc g (gtpsType, gtpsMethod) args = 
     match args with     
@@ -9303,16 +9326,11 @@ let GetDisallowedNullness (g:TcGlobals) (ty:TType) =
                 | true, Some tAbbrev -> (hasWithNullAnyWhere tAbbrev true) @ tyArgs
                 | _ -> tyArgs
 
-            | TType_tuple (_,tupTypes) ->
-                let inner = tupTypes |> List.collect (fun t -> hasWithNullAnyWhere t false)
-                if alreadyWrappedInOuterWithNull then ty :: inner else inner
-
+            | TType_anon_tt_union (_, tys)
+            | TType_tuple (_,tys)
             | TType_anon (tys=tys) -> 
                 let inner = tys |> List.collect (fun t -> hasWithNullAnyWhere t false)
                 if alreadyWrappedInOuterWithNull then ty :: inner else inner
-
-            // TODO: Anonymous type-tagged union
-            | TType_anon_tt_union (_, _) -> failwith "Anonymous type-tagged unions not implemented yet"
 
             | TType_fun (d, r, _) ->
                 (hasWithNullAnyWhere d false) @ (hasWithNullAnyWhere r false)
@@ -9577,6 +9595,8 @@ let isSealedTy g ty =
        if (isFSharpInterfaceTy g ty || isFSharpClassTy g ty) then 
           let tcref = tcrefOfAppTy g ty
           TryFindFSharpBoolAttribute g g.attrib_SealedAttribute tcref.Attribs = Some true
+       elif (isAnonTtUnionTy g ty) then
+          false
        else 
           // All other F# types, array, byref, tuple types are sealed
           true

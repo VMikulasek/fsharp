@@ -701,6 +701,8 @@ val isAnonRecdTy: TcGlobals -> TType -> bool
 
 val isUnionTy: TcGlobals -> TType -> bool
 
+val isAnonTtUnionTy: TcGlobals -> TType -> bool
+
 val isStructUnionTy: TcGlobals -> TType -> bool
 
 val isReprHiddenTy: TcGlobals -> TType -> bool
@@ -2506,6 +2508,12 @@ val LinearizeTopMatch: TcGlobals -> ParentRef -> Expr -> Expr
 val AdjustPossibleSubsumptionExpr: TcGlobals -> Expr -> Exprs -> (Expr * Exprs) option
 
 val NormalizeAndAdjustPossibleSubsumptionExprs: TcGlobals -> Expr -> Expr
+
+//-------------------------------------------------------------------------
+// Erased union helper
+//-------------------------------------------------------------------------
+
+val tryUnsortedAnonTtUnionTyCases: TcGlobals -> TType -> TTypes ValueOption
 
 //-------------------------------------------------------------------------
 // XmlDoc signatures, used by both VS mode and XML-help emit
