@@ -1268,6 +1268,8 @@ module internal AttributeHelpers =
             if (isFSharpInterfaceTy g ty || isFSharpClassTy g ty) then
                 let tcref = tcrefOfAppTy g ty
                 EntityHasWellKnownAttribute g WellKnownEntityAttributes.SealedAttribute_True tcref.Deref
+            elif (isAnonTtUnionTy g ty) then
+                false
             else
                 // All other F# types, array, byref, tuple types are sealed
                 true
@@ -1565,6 +1567,9 @@ module internal DebugPrint =
 
         | TType_tuple(_tupInfo, tys) -> sepListL (wordL (tagText "*")) (List.map (auxTypeAtomL env) tys) |> wrap
 
+        | TType_anon_tt_union (_, tys) ->
+            leftL (tagText "(") ^^ sepListL (wordL (tagText "|")) (List.map (auxTypeAtomL env) tys) ^^ rightL (tagText ")")
+
         | TType_fun(domainTy, rangeTy, nullness) ->
             let coreL =
                 ((auxTypeAtomL env domainTy ^^ wordL (tagText "->")) --- auxTypeL env rangeTy)
@@ -1582,9 +1587,6 @@ module internal DebugPrint =
                     (wordL (tagText ";"))
                     (List.map2 (fun nm ty -> wordL (tagField nm) --- auxTypeAtomL env ty) (Array.toList anonInfo.SortedNames) tys)
             )
-
-        // TODO: Anonymous type-tagged union
-        | TType_anon_tt_union (_, _) -> failwith "Anonymous type-tagged unions not implemented yet"
 
         | TType_measure unt ->
 #if DEBUG
