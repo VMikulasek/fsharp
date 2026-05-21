@@ -452,7 +452,7 @@ module internal NullnessAnalysis =
                     | _ -> tyArgs
 
                 | TType_anon_tt_union (_, tys)
-                | TType_tuple(_, tys) ->
+                | TType_tuple(_, tys)
                 | TType_anon(tys = tys) ->
                     let inner = tys |> List.collect (fun t -> hasWithNullAnyWhere t false)
                     if alreadyWrappedInOuterWithNull then ty :: inner else inner
