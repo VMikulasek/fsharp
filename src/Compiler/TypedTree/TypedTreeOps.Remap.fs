@@ -1184,7 +1184,7 @@ module internal TypeDecomposition =
         | TType_app(tcref, _, _) -> tcref.IsRecordTycon
         | _ -> false)
 
-    let fOrEnumTy g ty =
+    let isFSharpStructOrEnumTy g ty =
         ty
         |> stripTyEqns g
         |> (function
