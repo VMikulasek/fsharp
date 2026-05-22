@@ -9,6 +9,7 @@ type LanguageFeature =
     | FromEndSlicing
     | RuntimeAsync
     | WitnessPassing
+    | AnonTtUnions
     | AdditionalTypeDirectedConversions
     | StringInterpolation
     | ExpandedMeasurables
