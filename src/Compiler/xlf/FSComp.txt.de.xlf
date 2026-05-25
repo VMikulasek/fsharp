@@ -167,6 +167,11 @@
         <target state="translated">Das Signieren von Schlüsselcontainern wird auf dieser Plattform nicht unterstützt.</target>
         <note />
       </trans-unit>
+      <trans-unit id="csAnonTtUnionTypeNotContained">
+        <source>The anonymous type-tagged union type '{0}' is not compatible with the anonymous type-tagged union type '{1}'</source>
+        <target state="new">The anonymous type-tagged union type '{0}' is not compatible with the anonymous type-tagged union type '{1}'</target>
+        <note />
+      </trans-unit>
       <trans-unit id="csAvailableOverloads">
         <source>Available overloads:\n{0}</source>
         <target state="translated">Verfügbare Überladungen:\n{0}</target>
@@ -305,6 +310,11 @@
       <trans-unit id="featureAndBang">
         <source>applicative computation expressions</source>
         <target state="translated">applikative Berechnungsausdrücke</target>
+        <note />
+      </trans-unit>
+      <trans-unit id="featureAnonTtUnions">
+        <source>anonymous type-tagged unions</source>
+        <target state="new">anonymous type-tagged unions</target>
         <note />
       </trans-unit>
       <trans-unit id="featureArithmeticInLiterals">
