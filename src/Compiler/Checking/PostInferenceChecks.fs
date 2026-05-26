@@ -385,9 +385,6 @@ let rec CheckTypeDeep (cenv: cenv) (visitTy, visitTyconRefOpt, visitAppTyOpt, vi
         tps |> List.iter (fun tp -> tp.Constraints |> List.iter (CheckTypeConstraintDeep cenv f g env))
 
     | TType_measure _ -> ()
-
-    // TODO: Anonymous type-tagged union
-    | TType_anon_tt_union (_, _) -> failwith "Anonymous type-tagged unions not implemented yet"
     
     | TType_app (tcref, tinst, _) ->
         match visitTyconRefOpt with
@@ -419,6 +416,9 @@ let rec CheckTypeDeep (cenv: cenv) (visitTy, visitTyconRefOpt, visitAppTyOpt, vi
 
     | TType_ucase (_, tinst) ->
         CheckTypesDeep cenv f g env tinst
+
+    | TType_anon_tt_union (_, tys) ->
+        CheckTypesDeep cenv f g env tys
 
     | TType_tuple (_, tys) ->
         CheckTypesDeep cenv f g env tys
