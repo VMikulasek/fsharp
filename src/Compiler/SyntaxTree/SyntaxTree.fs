@@ -1333,11 +1333,8 @@ type SynUnionCase =
 [<NoEquality; NoComparison>]
 type SynAnonTtUnionCase =
 
-    | SynAnonTtUnionCase of
-        typ: SynType *
-        xmlDoc: PreXmlDoc *
-        range: range
-    
+    | SynAnonTtUnionCase of typ: SynType * xmlDoc: PreXmlDoc * range: range
+
     member this.Range =
         match this with
         | SynAnonTtUnionCase(range = m) -> m

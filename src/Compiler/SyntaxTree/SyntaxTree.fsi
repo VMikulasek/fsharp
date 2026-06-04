@@ -1450,10 +1450,7 @@ type SynUnionCase =
 [<NoEquality; NoComparison>]
 type SynAnonTtUnionCase =
 
-    | SynAnonTtUnionCase of
-        typ: SynType *
-        xmlDoc: PreXmlDoc *
-        range: range
+    | SynAnonTtUnionCase of typ: SynType * xmlDoc: PreXmlDoc * range: range
 
     /// Gets the syntax range of this construct
     member Range: range
