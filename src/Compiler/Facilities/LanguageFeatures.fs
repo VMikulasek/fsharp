@@ -22,7 +22,7 @@ type LanguageFeature =
     | ResumableStateMachines
     | DefaultInterfaceMemberConsumption
     | WitnessPassing
-    | AnonTtUnions
+    | AnonTypeTaggedUnions
     | AdditionalTypeDirectedConversions
     | StringInterpolation
     | ExpandedMeasurables
@@ -218,7 +218,7 @@ type LanguageVersion(versionText, ?disabledFeaturesArray: LanguageFeature array)
                 // Unfinished features that still need work before they can be assigned a release language version.
                 LanguageFeature.FromEndSlicing, previewVersion // Unfinished features --- needs work
                 LanguageFeature.ExtensionConstraintSolutions, previewVersion
-                LanguageFeature.AnonTtUnions, previewVersion
+                LanguageFeature.AnonTypeTaggedUnions, previewVersion
             ]
 
     static let defaultLanguageVersion = LanguageVersion("default")
@@ -315,7 +315,7 @@ type LanguageVersion(versionText, ?disabledFeaturesArray: LanguageFeature array)
         | LanguageFeature.ResumableStateMachines -> FSComp.SR.featureResumableStateMachines ()
         | LanguageFeature.DefaultInterfaceMemberConsumption -> FSComp.SR.featureDefaultInterfaceMemberConsumption ()
         | LanguageFeature.WitnessPassing -> FSComp.SR.featureWitnessPassing ()
-        | LanguageFeature.AnonTtUnions -> FSComp.SR.featureAnonTtUnions ()
+        | LanguageFeature.AnonTypeTaggedUnions -> FSComp.SR.featureAnonTypeTaggedUnions ()
         | LanguageFeature.AdditionalTypeDirectedConversions -> FSComp.SR.featureAdditionalImplicitConversions ()
         | LanguageFeature.StringInterpolation -> FSComp.SR.featureStringInterpolation ()
         | LanguageFeature.ExpandedMeasurables -> FSComp.SR.featureExpandedMeasurables ()
