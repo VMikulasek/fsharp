@@ -258,7 +258,7 @@ let visitSynType (t: SynType) : FileContentEntry list =
         | SynType.AnonRecd(fields = fields) ->
             let continuations = List.map (snd >> visit) fields
             Continuation.concatenate continuations continuation
-        | SynType.AnonTtUnion(_, _) ->
+        | SynType.AnonTypeTaggedUnion(_, _) ->
             // TODO Anonymous type-tagged union
             failwith "Anonymous type-tagged unions not implemented yet"
         | SynType.Array(elementType = elementType) -> visit elementType continuation

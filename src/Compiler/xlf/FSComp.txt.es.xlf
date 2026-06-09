@@ -167,7 +167,7 @@
         <target state="translated">La firma del contenedor de claves no se admite en esta plataforma.</target>
         <note />
       </trans-unit>
-      <trans-unit id="csAnonTtUnionTypeNotContained">
+      <trans-unit id="csAnonTypeTaggedUnionTypeNotContained">
         <source>The anonymous type-tagged union type '{0}' is not compatible with the anonymous type-tagged union type '{1}'</source>
         <target state="new">The anonymous type-tagged union type '{0}' is not compatible with the anonymous type-tagged union type '{1}'</target>
         <note />
@@ -312,7 +312,7 @@
         <target state="translated">expresiones de cálculo aplicativas</target>
         <note />
       </trans-unit>
-      <trans-unit id="featureAnonTtUnions">
+      <trans-unit id="featureAnonTypeTaggedUnions">
         <source>anonymous type-tagged unions</source>
         <target state="new">anonymous type-tagged unions</target>
         <note />

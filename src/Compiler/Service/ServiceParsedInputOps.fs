@@ -719,7 +719,7 @@ module ParsedInput =
             | SynType.Anon _
             | SynType.AnonRecd _
             // TODO: Anonymous type-tagged union
-            | SynType.AnonTtUnion _
+            | SynType.AnonTypeTaggedUnion _
             | SynType.LongIdent _
             | SynType.Var _
             | SynType.StaticConstant _
@@ -2016,7 +2016,7 @@ module ParsedInput =
             | SynType.Anon _
             | SynType.AnonRecd _
             // TODO: Anonymous type-tagged union
-            | SynType.AnonTtUnion _
+            | SynType.AnonTypeTaggedUnion _
             | SynType.Var _
             | SynType.StaticConstant _
             | SynType.FromParseError _ -> ()

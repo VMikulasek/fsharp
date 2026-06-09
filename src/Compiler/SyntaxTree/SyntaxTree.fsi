@@ -500,7 +500,7 @@ type SynType =
     | AnonRecd of isStruct: bool * fields: (Ident * SynType) list * range: range
 
     /// F# syntax: (type1 | ... | typeN)
-    | AnonTtUnion of anonTtUnionCases: SynAnonTtUnionCase list * range: range
+    | AnonTypeTaggedUnion of anonTypeTaggedUnionCases: SynAnonTypeTaggedUnionCase list * range: range
 
     /// F# syntax: type[]
     | Array of rank: int * elementType: SynType * range: range
@@ -1448,9 +1448,9 @@ type SynUnionCase =
 
 /// Represents the syntax tree for one case in an anonymous type-tagged union definition.
 [<NoEquality; NoComparison>]
-type SynAnonTtUnionCase =
+type SynAnonTypeTaggedUnionCase =
 
-    | SynAnonTtUnionCase of typ: SynType * xmlDoc: PreXmlDoc * range: range
+    | SynAnonTypeTaggedUnionCase of typ: SynType * xmlDoc: PreXmlDoc * range: range
 
     /// Gets the syntax range of this construct
     member Range: range

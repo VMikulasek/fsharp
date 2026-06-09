@@ -4637,9 +4637,9 @@ and TcTypeOrMeasure kindOpt (cenv: cenv) newOk checkConstraints occ (iwsam: Warn
     | SynType.AnonRecd(isStruct, args, m) ->
         TcAnonRecdType cenv newOk checkConstraints occ env tpenv isStruct args m
 
-    | SynType.AnonTtUnion(synCases, m) ->
-        checkLanguageFeatureError cenv.g.langVersion LanguageFeature.AnonTtUnions m
-        TcAnonTtUnionTypeOr cenv env tpenv synCases m
+    | SynType.AnonTypeTaggedUnion(synCases, m) ->
+        checkLanguageFeatureError cenv.g.langVersion LanguageFeature.AnonTypeTaggedUnions m
+        TcAnonTypeTaggedUnionTypeOr cenv env tpenv synCases m
 
     | SynType.Fun(argType = domainTy; returnType = resultTy) ->
         TcFunctionType cenv newOk checkConstraints occ env tpenv domainTy resultTy
@@ -4924,18 +4924,18 @@ and TcTypeMeasureApp kindOpt (cenv: cenv) newOk checkConstraints occ env tpenv a
 and TcType (cenv: cenv) newOk checkConstraints occ iwsam env (tpenv: UnscopedTyparEnv) ty =
     TcTypeOrMeasure (Some TyparKind.Type) cenv newOk checkConstraints occ iwsam env tpenv ty
 
-and TcAnonTtUnionTypeOr (cenv: cenv) env (tpenv: UnscopedTyparEnv) synCases m =
+and TcAnonTypeTaggedUnionTypeOr (cenv: cenv) env (tpenv: UnscopedTyparEnv) synCases m =
     let g = cenv.g
     // Helper method for eliminating duplicate types from lists of types that form a union type,
     // create a disjoint set of cases
     // taking into account that a subtype is a "duplicate" of its supertype.
     let rec addToCases (pt: TType) (list: ResizeArray<TType>) =
-        if not (ResizeArray.exists (isObjTyAnyNullness g) list) then
+        if not (Seq.exists (isObjTyAnyNullness g) list) then
             if isObjTyAnyNullness g pt then
                 list.Clear()
                 list.Add(pt)
-            elif isAnonTtUnionTy g pt then
-                let otherUnsortedCases = tryUnsortedAnonTtUnionTyCases g pt |> ValueOption.defaultValue []
+            elif isAnonTypeTaggedUnionTy g pt then
+                let otherUnsortedCases = tryUnsortedAnonTypeTaggedUnionTyCases g pt |> ValueOption.defaultValue []
                 for otherCase in otherUnsortedCases
                     do addToCases otherCase list
             else
@@ -4951,31 +4951,31 @@ and TcAnonTtUnionTypeOr (cenv: cenv) env (tpenv: UnscopedTyparEnv) synCases m =
                     i <- i + 1
                 if shouldAdd then list.Add pt
 
-    let createDisjointTypes synAnonTtUnionCases =
+    let createDisjointTypes synAnonTypeTaggedUnionCases =
         let unionTypeCases = ResizeArray()
         do
-            synAnonTtUnionCases
-            |> List.map(fun (SynAnonTtUnionCase(typ=ty)) -> TcTypeAndRecover cenv NoNewTypars CheckCxs ItemOccurrence.UseInType WarnOnIWSAM.Yes env tpenv ty |> fst)
+            synAnonTypeTaggedUnionCases
+            |> List.map(fun (SynAnonTypeTaggedUnionCase(typ=ty)) -> TcTypeAndRecover cenv NoNewTypars CheckCxs ItemOccurrence.UseInType WarnOnIWSAM.Yes env tpenv ty |> fst)
             |> List.iter (fun ty -> addToCases ty unionTypeCases)
-        ResizeArray.toList unionTypeCases
+        Seq.toList unionTypeCases
 
     let getCommonAncestorOfTys g amap tys =
         let superTypes = tys |> List.map (AllPrimarySuperTypesOfType g amap m AllowMultiIntfInstantiations.No)
         List.fold (ListSet.intersect (typeEquiv g)) (List.head superTypes) (List.tail superTypes) |> List.head
 
     // Sort into order for ordered equality
-    let sortedIndexedAnonTtUnionCases =
+    let sortedIndexedAnonTypeTaggedUnionCases =
         createDisjointTypes synCases
         |> List.indexed
         |> List.sortBy (snd >> stripTyEqnsAndMeasureEqns g >> string)
 
     // Map from sorted indexes to unsorted index
-    let sigma = List.map fst sortedIndexedAnonTtUnionCases |> List.toArray
-    let sortedAnonTtUnionCases = List.map snd sortedIndexedAnonTtUnionCases
-    let commonAncestorTy = getCommonAncestorOfTys g cenv.amap sortedAnonTtUnionCases
+    let sigma = List.map fst sortedIndexedAnonTypeTaggedUnionCases |> List.toArray
+    let sortedAnonTypeTaggedUnionCases = List.map snd sortedIndexedAnonTypeTaggedUnionCases
+    let commonAncestorTy = getCommonAncestorOfTys g cenv.amap sortedAnonTypeTaggedUnionCases
 
-    let anonTtUnionInfo = AnonTtUnionInfo.Create(commonAncestorTy, sigma)
-    TType_anon_tt_union(anonTtUnionInfo, sortedAnonTtUnionCases), tpenv
+    let anonTypeTaggedUnionInfo = AnonTypeTaggedUnionInfo.Create(commonAncestorTy, sigma)
+    TType_anon_type_tagged_union(anonTypeTaggedUnionInfo, sortedAnonTypeTaggedUnionCases), tpenv
 
 and TcMeasure (cenv: cenv) newOk checkConstraints occ env (tpenv: UnscopedTyparEnv) (StripParenTypes ty) m =
     match ty with
