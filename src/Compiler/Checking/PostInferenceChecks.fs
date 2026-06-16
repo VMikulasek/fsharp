@@ -417,7 +417,7 @@ let rec CheckTypeDeep (cenv: cenv) (visitTy, visitTyconRefOpt, visitAppTyOpt, vi
     | TType_ucase (_, tinst) ->
         CheckTypesDeep cenv f g env tinst
 
-    | TType_anon_type_tagged_union (_, tys) ->
+    | TType_anon_union (_, tys) ->
         CheckTypesDeep cenv f g env tys
 
     | TType_tuple (_, tys) ->
