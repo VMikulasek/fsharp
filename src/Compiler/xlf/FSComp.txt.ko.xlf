@@ -167,9 +167,9 @@
         <target state="translated">키 컨테이너 서명은 이 플랫폼에서 지원되지 않습니다.</target>
         <note />
       </trans-unit>
-      <trans-unit id="csAnonTypeTaggedUnionTypeNotContained">
-        <source>The anonymous type-tagged union type '{0}' is not compatible with the anonymous type-tagged union type '{1}'</source>
-        <target state="new">The anonymous type-tagged union type '{0}' is not compatible with the anonymous type-tagged union type '{1}'</target>
+      <trans-unit id="csAnonUnionTypeNotContained">
+        <source>The anonymous union type '{0}' is not compatible with the anonymous union type '{1}'</source>
+        <target state="new">The anonymous union type '{0}' is not compatible with the anonymous union type '{1}'</target>
         <note />
       </trans-unit>
       <trans-unit id="csAvailableOverloads">
@@ -312,9 +312,9 @@
         <target state="translated">적용 가능한 계산 식</target>
         <note />
       </trans-unit>
-      <trans-unit id="featureAnonTypeTaggedUnions">
-        <source>anonymous type-tagged unions</source>
-        <target state="new">anonymous type-tagged unions</target>
+      <trans-unit id="featureAnonUnions">
+        <source>anonymous unions</source>
+        <target state="new">anonymous unions</target>
         <note />
       </trans-unit>
       <trans-unit id="featureArithmeticInLiterals">

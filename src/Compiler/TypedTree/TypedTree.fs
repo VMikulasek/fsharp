@@ -4575,7 +4575,7 @@ type TType =
     /// Indicates the type is a variable type, whether declared, generalized or an inference type parameter  
     | TType_var of typar: Typar * nullness: Nullness
 
-    | TType_anon_type_tagged_union of unionInfo: AnonTypeTaggedUnionInfo * choices: TTypes
+    | TType_anon_union of unionInfo: AnonUnionInfo * choices: TTypes
 
     /// Indicates the type is a unit-of-measure expression being used as an argument to a type or member
     | TType_measure of measure: Measure
@@ -4594,7 +4594,7 @@ type TType =
         | TType_ucase (_uc, _tinst) ->
             let (TILObjectReprData(scope, _nesting, _definition)) = _uc.Tycon.ILTyconInfo
             scope.QualifiedName
-        | TType_anon_type_tagged_union _ -> ""
+        | TType_anon_union _ -> ""
 
     [<DebuggerBrowsable(DebuggerBrowsableState.Never)>]
     member x.DebugText = x.LimitedToString(4)
@@ -4620,7 +4620,7 @@ type TType =
             | None -> tp.DisplayName
             | Some t -> tp.DisplayName + $" (solved: {if maxDepth < 0 then Boolean.TrueString else t.LimitedToString(maxDepth-1)})"
         | TType_measure ms -> ms.ToString()
-        | TType_anon_type_tagged_union (_, l) -> "( " + String.concat " | " (List.map string l) +  " )"
+        | TType_anon_union (_, l) -> "( " + String.concat " | " (List.map string l) +  " )"
 
     override x.ToString() = x.LimitedToString(4)
 
@@ -4705,7 +4705,7 @@ type AnonRecdTypeInfo =
     member x.DisplayNameByIdx idx = x.SortedNames[idx] |> ConvertLogicalNameToDisplayName
 
 [<RequireQualifiedAccess>]
-type AnonTypeTaggedUnionInfo =
+type AnonUnionInfo =
     {
         /// Common ancestor type for all cases in this union, used for ILgen
         CommonAncestorTy: TType

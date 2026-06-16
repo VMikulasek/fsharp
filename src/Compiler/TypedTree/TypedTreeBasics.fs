@@ -278,7 +278,7 @@ let tryAddNullnessToTy nullnessNew (ty:TType) =
         else 
             Some (TType_fun (d, r, nullnessAfter))
 
-    | TType_anon_type_tagged_union _ -> None
+    | TType_anon_union _ -> None
     | TType_forall _ -> None
     | TType_measure _ -> None
 

@@ -6627,8 +6627,8 @@ atomTypeOrAnonType:
              | _ -> reportParseErrorAt (rhs parseState 1) (FSComp.SR.parsInvalidAnonRecdType()); None)
        SynType.AnonRecd(isStruct, flds2, rhs parseState 1) }
 
-  | anonTypeTaggedUnionType
-    { SynType.AnonTypeTaggedUnion ($1,(rhs parseState 1, $1 |> List.map(fun (SynAnonTypeTaggedUnionCase(range = m)) -> m)) ||> List.fold unionRanges) }
+  | anonUnionType
+    { SynType.AnonUnion ($1,(rhs parseState 1, $1 |> List.map(fun (SynAnonUnionCase(range = m)) -> m)) ||> List.fold unionRanges) }
 
 /* Any tokens in this grammar must be added to the lex filter rule 'peekAdjacentTypars' */
 /* See the F# specification "Lexical analysis of type applications and type parameter definitions" */
@@ -6709,27 +6709,27 @@ atomType:
      { if not $3 then reportParseErrorAt (rhs parseState 2) (FSComp.SR.parsExpectedNameAfterToken())
        $1 }
 
-/* The core of an anonymous type-tagged union type definition */
-anonTypeTaggedUnionType:
-  | LPAREN attrAnonTypeTaggedUnionCaseDecl barAndgrabXmlDoc attrAnonTypeTaggedUnionCaseDecls rparen
+/* The core of an anonymous union type definition */
+anonUnionType:
+  | LPAREN attrAnonUnionCaseDecl barAndgrabXmlDoc attrAnonUnionCaseDecls rparen
       {
         let (nextXmlDoc, _) = $3
         ($2 (grabXmlDoc(parseState, [], 1))) :: $4 nextXmlDoc
       }
 
-attrAnonTypeTaggedUnionCaseDecls:
-  | attrAnonTypeTaggedUnionCaseDecl barAndgrabXmlDoc attrAnonTypeTaggedUnionCaseDecls
+attrAnonUnionCaseDecls:
+  | attrAnonUnionCaseDecl barAndgrabXmlDoc attrAnonUnionCaseDecls
     {
       (fun xmlDoc ->
         let (nextXmlDoc, _) = $2
         $1 xmlDoc :: $3 nextXmlDoc
       )
     }
-  | attrAnonTypeTaggedUnionCaseDecl { (fun xmlDoc -> [ $1 xmlDoc ]) }
+  | attrAnonUnionCaseDecl { (fun xmlDoc -> [ $1 xmlDoc ]) }
 
-/* The core of an anonymous type-tagged union case definition */
-attrAnonTypeTaggedUnionCaseDecl:
-  | typ { let mDecl = rhs parseState 3 in (fun xmlDoc -> SynAnonTypeTaggedUnionCase ($1, xmlDoc, mDecl)) }
+/* The core of an anonymous union case definition */
+attrAnonUnionCaseDecl:
+  | typ { let mDecl = rhs parseState 3 in (fun xmlDoc -> SynAnonUnionCase ($1, xmlDoc, mDecl)) }
 
 typeArgsNoHpaDeprecated:
   | typeArgsActual
