@@ -382,7 +382,7 @@ module internal TypeDecomposition =
 
     val isUnionTy: TcGlobals -> TType -> bool
 
-    val isAnonTypeTaggedUnionTy: TcGlobals -> TType -> bool
+    val isAnonUnionTy: TcGlobals -> TType -> bool
 
     val isStructUnionTy: TcGlobals -> TType -> bool
 
@@ -441,8 +441,8 @@ module internal TypeDecomposition =
     [<return: Struct>]
     val (|FunTy|_|): TcGlobals -> TType -> (TType * TType) voption
 
-    // Anonymous type-tagged union helper
-    val tryUnsortedAnonTypeTaggedUnionTyCases: TcGlobals -> TType -> TTypes ValueOption
+    // Anonymous union helper
+    val tryUnsortedAnonUnionTyCases: TcGlobals -> TType -> TTypes ValueOption
 
     /// Try to get a TyconRef for a type without erasing type abbreviations
     val tryNiceEntityRefOfTy: TType -> TyconRef voption
