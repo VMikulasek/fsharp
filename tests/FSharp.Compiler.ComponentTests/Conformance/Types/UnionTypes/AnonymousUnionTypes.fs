@@ -189,3 +189,19 @@ module AnonymousUnionTypes =
         |> withLangVersionPreview
         |> verifyCompile
         |> shouldFail
+
+    [<Theory; FileInlineData("E_AnonPatternMatching.fs")>]
+    let ``E_PatternMatching_fs`` compilation =
+        compilation
+        |> getCompilation
+        |> withLangVersionPreview
+        |> verifyCompile
+        |> shouldFail
+
+    [<Theory; FileInlineData("E_AnonPatternMatchingSubtypeInclusion.fs")>]
+    let ``E_PatternMatchingSubtypeInclusion_fs`` compilation =
+        compilation
+        |> getCompilation
+        |> withLangVersionPreview
+        |> verifyCompile
+        |> shouldFail
