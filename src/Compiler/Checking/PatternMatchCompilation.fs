@@ -659,7 +659,13 @@ let isAnonymousUnionExhaustive g amap m constituents discrims =
             discrims |> List.exists (fun discrim ->
                 match discrim with
                 | DecisionTreeTest.IsInst (_, tgtTy) ->
-                    // Check if this type test covers the constituent
+                // For anonymous unions, type variables only cover themselves
+                // and dont cover concrete types without constraint info
+                if isTyparTy g tgtTy && isTyparTy g constituent then
+                    typeEquiv g tgtTy constituent
+                elif isTyparTy g tgtTy || isTyparTy g constituent then
+                    false
+                else
                     TypeFeasiblySubsumesType 0 g amap m tgtTy CanCoerce constituent ||
                     typeEquiv g tgtTy constituent
                 | _ -> false))
@@ -1206,7 +1212,7 @@ let CompilePatternBasic
 
     /// Select the set of discriminators which we can handle in one test, or as a series of iterated tests,
     /// e.g. in the case of TPat_isinst. Ensure we only take at most one class of `TPat_query` at a time.
-    /// Record the clause numbers so we know which rule the TPat_query cam from, so that when we project through
+    /// Record the clause numbers so we know which rule the TPat_query came from, so that when we project through
     /// the frontier we only project the right rule.
     and ChooseSimultaneousEdges frontiers path =
         frontiers |> chooseSimultaneousEdgeSet [] (fun prev (Frontier (i, active, _)) ->
