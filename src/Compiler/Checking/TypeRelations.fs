@@ -82,6 +82,28 @@ let rec TypeDefinitelySubsumesTypeNoCoercion ndeep g amap m ty1 ty2 =
             ty2 |> GetImmediateInterfacesOfType SkipUnrefInterfaces.Yes g amap m
                 |> List.exists (TypeDefinitelySubsumesTypeNoCoercion (ndeep+1) g amap m ty1))))
 
+let rec TypeSubsumesTypeForExhaustiveness ndeep g amap m ty1 ty2 =
+    if ndeep > 100 then
+        error(InternalError("Large class hierarchy in TypeSubsumesTypeForExhaustiveness", m))
+
+    if ty1 === ty2 then true
+    elif typeEquiv g ty1 ty2 then true
+    else
+        let ty1 = stripTyEqns g ty1
+        let ty2 = stripTyEqns g ty2
+
+        // F# reference types are subtypes of type 'obj
+        (typeEquiv g ty1 g.obj_ty_ambivalent && isRefTy g ty2) ||
+        // Follow the supertype chain (without isRefTy restriction for value types)
+        (isAppTy g ty2 &&
+        ((match GetSuperTypeOfType g amap m ty2 with
+            | None -> false
+            | Some ty -> TypeSubsumesTypeForExhaustiveness (ndeep+1) g amap m ty1 ty) ||
+        // Follow the interface hierarchy
+        (isInterfaceTy g ty1 &&
+            ty2 |> GetImmediateInterfacesOfType SkipUnrefInterfaces.Yes g amap m
+                |> List.exists (TypeSubsumesTypeForExhaustiveness (ndeep+1) g amap m ty1))))
+
 let stripAll stripMeasures g ty =
     if stripMeasures then
         ty |> stripTyEqnsWrtErasure EraseAll g |> stripMeasuresFromTy g
