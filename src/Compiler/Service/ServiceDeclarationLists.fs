@@ -510,6 +510,7 @@ module DeclarationListHelpers =
         | Item.Types (_, [TType_forall _]) 
         | Item.Types (_, [TType_tuple _]) 
         | Item.Types (_, [TType_ucase _]) 
+        | Item.Types (_, [TType_anon_union _])
 
         // We don't expect these cases
         | Item.Types (_, []) 
@@ -517,9 +518,6 @@ module DeclarationListHelpers =
         | Item.UnqualifiedType []
         | Item.ModuleOrNamespaces []
         | Item.CustomOperation (_, _, None) ->  ToolTipElement.None
-        
-        // TODO: Anonymous union
-        | Item.Types (_, [TType_anon_union _]) -> failwith "Anonymous unions not implemented yet"
 
     /// Format the structured version of a tooltip for an item
     let FormatStructuredDescriptionOfItem isDecl infoReader ad m denv item symbol width = 
