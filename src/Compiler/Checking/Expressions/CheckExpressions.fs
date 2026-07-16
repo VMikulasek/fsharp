@@ -48,6 +48,7 @@ open Import
 
 #if !NO_TYPEPROVIDERS
 open FSharp.Compiler.TypeProviders
+open Internal.Utilities
 #endif
 
 //-------------------------------------------------------------------------
@@ -3077,7 +3078,7 @@ let TcRuntimeTypeTest isCast isOperator (cenv: cenv) denv m tgtTy srcTy =
     if isSealedTy g srcTy then
         error(RuntimeCoercionSourceSealed(denv, srcTy, m))
 
-    if (isSealedTy g tgtTy || isTyparTy g tgtTy || not (isInterfaceTy g srcTy)) && not (isObjTyAnyNullness g srcTy) then
+    if (isSealedTy g tgtTy || isTyparTy g tgtTy || not (isInterfaceTy g srcTy)) && not (isObjTyAnyNullness g srcTy) && not (isAnonUnionTy g srcTy) then
         let context = if isCast then ContextInfo.RuntimeTypeTest isOperator else ContextInfo.NoContext
         AddCxTypeMustSubsumeType context denv cenv.css m NoTrace srcTy tgtTy
 
@@ -4636,6 +4637,10 @@ and TcTypeOrMeasure kindOpt (cenv: cenv) newOk checkConstraints occ (iwsam: Warn
     | SynType.AnonRecd(isStruct, args, m) ->
         TcAnonRecdType cenv newOk checkConstraints occ env tpenv isStruct args m
 
+    | SynType.AnonUnion(synCases, m) ->
+        checkLanguageFeatureError cenv.g.langVersion LanguageFeature.AnonUnions m
+        TcAnonUnionTypeOr cenv env tpenv synCases m
+
     | SynType.Fun(argType = domainTy; returnType = resultTy) ->
         TcFunctionType cenv newOk checkConstraints occ env tpenv domainTy resultTy
 
@@ -4918,6 +4923,77 @@ and TcTypeMeasureApp kindOpt (cenv: cenv) newOk checkConstraints occ env tpenv a
 
 and TcType (cenv: cenv) newOk checkConstraints occ iwsam env (tpenv: UnscopedTyparEnv) ty =
     TcTypeOrMeasure (Some TyparKind.Type) cenv newOk checkConstraints occ iwsam env tpenv ty
+
+and TcAnonUnionTypeOr (cenv: cenv) env (tpenv: UnscopedTyparEnv) synCases m =
+    let g = cenv.g
+    // Helper method for eliminating duplicate types from lists of types that form a union type,
+    // create a disjoint set of cases
+    // taking into account that a subtype is a "duplicate" of its supertype.
+    let rec addToCases (pt: TType) (list: ResizeArray<TType>) =
+        if not (Seq.exists (isObjTyAnyNullness g) list) then
+            if isObjTyAnyNullness g pt then
+                // Warning: all existing types are subtypes of obj|null and will be ignored
+                for t in list do
+                    warning(Error(FSComp.SR.tcAnonUnionCaseOverlap(
+                        NicePrint.stringOfTy env.DisplayEnv t,
+                        NicePrint.stringOfTy env.DisplayEnv pt), m))
+                list.Clear()
+                list.Add(pt)
+            elif isAnonUnionTy g pt then
+                let otherUnsortedCases = tryUnsortedAnonUnionTyCases g pt |> ValueOption.defaultValue []
+                for otherCase in otherUnsortedCases
+                    do addToCases otherCase list
+            else
+                let mutable shouldAdd = true
+                let mutable i = 0
+                while i < list.Count && shouldAdd do
+                    let t = list.[i]
+                    if isSubTypeOf cenv.g cenv.amap m pt t then
+                        // Warning: new type pt is a subtype of existing type t and will be ignored
+                        warning(Error(FSComp.SR.tcAnonUnionCaseOverlap(
+                            NicePrint.stringOfTy env.DisplayEnv pt,
+                            NicePrint.stringOfTy env.DisplayEnv t), m))
+                        shouldAdd <- false
+                    elif isSuperTypeOf cenv.g cenv.amap m pt t then
+                        // Warning: existing type t is a subtype of new type pt and will be removed
+                        warning(Error(FSComp.SR.tcAnonUnionCaseOverlap(
+                            NicePrint.stringOfTy env.DisplayEnv t,
+                            NicePrint.stringOfTy env.DisplayEnv pt), m))
+                        list.RemoveAt(i)
+                        i <- i - 1 // redo this index
+                    i <- i + 1
+                if shouldAdd then list.Add pt
+        else
+            // Warning: new type pt is a subtype of obj and will be ignored
+            warning(Error(FSComp.SR.tcAnonUnionCaseOverlap(
+                NicePrint.stringOfTy env.DisplayEnv pt,
+                NicePrint.stringOfTy env.DisplayEnv cenv.g.system_Object_ty), m))
+
+    let createDisjointTypes synAnonUnionCases =
+        let unionTypeCases = ResizeArray()
+        do
+            synAnonUnionCases
+            |> List.map(fun (SynAnonUnionCase(typ=ty)) -> TcTypeAndRecover cenv NoNewTypars CheckCxs ItemOccurrence.UseInType WarnOnIWSAM.Yes env tpenv ty |> fst)
+            |> List.iter (fun ty -> addToCases ty unionTypeCases)
+        Seq.toList unionTypeCases
+
+    let getCommonAncestorOfTys g amap tys =
+        let superTypes = tys |> List.map (AllPrimarySuperTypesOfType g amap m AllowMultiIntfInstantiations.No)
+        List.fold (ListSet.intersect (typeEquiv g)) (List.head superTypes) (List.tail superTypes) |> List.head
+
+    // Sort into order for ordered equality
+    let sortedIndexedAnonUnionCases =
+        createDisjointTypes synCases
+        |> List.indexed
+        |> List.sortBy (snd >> stripTyEqnsAndMeasureEqns g >> string)
+
+    // Map from sorted indexes to unsorted index
+    let sigma = List.map fst sortedIndexedAnonUnionCases |> List.toArray
+    let sortedAnonUnionCases = List.map snd sortedIndexedAnonUnionCases
+    let commonAncestorTy = getCommonAncestorOfTys g cenv.amap sortedAnonUnionCases
+
+    let anonUnionInfo = AnonUnionInfo.Create(commonAncestorTy, sigma)
+    TType_anon_union(anonUnionInfo, sortedAnonUnionCases), tpenv
 
 and TcMeasure (cenv: cenv) newOk checkConstraints occ env (tpenv: UnscopedTyparEnv) (StripParenTypes ty) m =
     match ty with

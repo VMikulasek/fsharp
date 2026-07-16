@@ -7,6 +7,7 @@ module internal FSharp.Compiler.TypeRelations
 open FSharp.Compiler.Features
 open Internal.Utilities.Collections
 open Internal.Utilities.Library
+open Internal.Utilities.Library.Extras
 open Internal.Utilities.TypeHashing.StructuralUtilities
 
 open FSharp.Compiler.DiagnosticsLogger
@@ -81,6 +82,28 @@ let rec TypeDefinitelySubsumesTypeNoCoercion ndeep g amap m ty1 ty2 =
             ty2 |> GetImmediateInterfacesOfType SkipUnrefInterfaces.Yes g amap m
                 |> List.exists (TypeDefinitelySubsumesTypeNoCoercion (ndeep+1) g amap m ty1))))
 
+let rec TypeSubsumesTypeForExhaustiveness ndeep g amap m ty1 ty2 =
+    if ndeep > 100 then
+        error(InternalError("Large class hierarchy in TypeSubsumesTypeForExhaustiveness", m))
+
+    if ty1 === ty2 then true
+    elif typeEquiv g ty1 ty2 then true
+    else
+        let ty1 = stripTyEqns g ty1
+        let ty2 = stripTyEqns g ty2
+
+        // F# reference types are subtypes of type 'obj
+        (typeEquiv g ty1 g.obj_ty_ambivalent && isRefTy g ty2) ||
+        // Follow the supertype chain (without isRefTy restriction for value types)
+        (isAppTy g ty2 &&
+        ((match GetSuperTypeOfType g amap m ty2 with
+            | None -> false
+            | Some ty -> TypeSubsumesTypeForExhaustiveness (ndeep+1) g amap m ty1 ty) ||
+        // Follow the interface hierarchy
+        (isInterfaceTy g ty1 &&
+            ty2 |> GetImmediateInterfacesOfType SkipUnrefInterfaces.Yes g amap m
+                |> List.exists (TypeSubsumesTypeForExhaustiveness (ndeep+1) g amap m ty1))))
+
 let stripAll stripMeasures g ty =
     if stripMeasures then
         ty |> stripTyEqnsWrtErasure EraseAll g |> stripMeasuresFromTy g
@@ -118,6 +141,9 @@ let rec TypesFeasiblyEquivalent stripMeasures ndeep g amap m ty1 ty2 =
         TypesFeasiblyEquivalent stripMeasures ndeep g amap m domainTy1 domainTy2 &&
         TypesFeasiblyEquivalent stripMeasures ndeep g amap m rangeTy1 rangeTy2
 
+    | TType_anon_union (_, l1), TType_anon_union (_, l2) ->
+        List.lengthsEqAndForall2 (TypesFeasiblyEquivalent stripMeasures ndeep g amap m) l1 l2
+
     | _ ->
         false
 
@@ -148,6 +174,9 @@ let rec TypeFeasiblySubsumesType ndeep (g: TcGlobals) (amap: ImportMap) m (ty1: 
         | TType_fun _, TType_fun _ ->
             TypesFeasiblyEquiv ndeep g amap m ty1 ty2
 
+        | TType_anon_union (_, l1), TType_anon_union (_, l2) ->
+            ListSet.isSupersetOf (fun x1 x2 -> TypeFeasiblySubsumesType ndeep g amap m x1 canCoerce x2) l1 l2
+
         | _ ->
             // F# reference types are subtypes of type 'obj'
                 if isObjTyAnyNullness g ty1 && (canCoerce = CanCoerce || isRefTy g ty2) then
@@ -156,7 +185,7 @@ let rec TypeFeasiblySubsumesType ndeep (g: TcGlobals) (amap: ImportMap) m (ty1: 
                     true
                 else
                     let interfaces = GetImmediateInterfacesOfType SkipUnrefInterfaces.Yes g amap m ty2
-                    // See if any interface in type hierarchy of ty2 is a supertype of ty1
+                    // See if ty1 i a supertype of any interface implemented by ty2
                     List.exists (TypeFeasiblySubsumesType (ndeep + 1) g amap m ty1 NoCoerce) interfaces
 
     match ty1, ty2 with

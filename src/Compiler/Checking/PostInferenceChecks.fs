@@ -385,7 +385,7 @@ let rec CheckTypeDeep (cenv: cenv) (visitTy, visitTyconRefOpt, visitAppTyOpt, vi
         tps |> List.iter (fun tp -> tp.Constraints |> List.iter (CheckTypeConstraintDeep cenv f g env))
 
     | TType_measure _ -> ()
-
+    
     | TType_app (tcref, tinst, _) ->
         match visitTyconRefOpt with
         | Some visitTyconRef -> visitTyconRef typeInstParentOpt tcref
@@ -416,6 +416,9 @@ let rec CheckTypeDeep (cenv: cenv) (visitTy, visitTyconRefOpt, visitAppTyOpt, vi
 
     | TType_ucase (_, tinst) ->
         CheckTypesDeep cenv f g env tinst
+
+    | TType_anon_union (_, tys) ->
+        CheckTypesDeep cenv f g env tys
 
     | TType_tuple (_, tys) ->
         CheckTypesDeep cenv f g env tys

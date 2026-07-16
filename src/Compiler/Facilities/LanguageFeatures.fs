@@ -33,6 +33,7 @@ type LanguageFeature =
     | NullableOptionalInterop
     | DefaultInterfaceMemberConsumption
     | WitnessPassing
+    | AnonUnions
     | AdditionalTypeDirectedConversions
     | InterfacesWithMultipleGenericInstantiation
     | StringInterpolation
@@ -267,6 +268,7 @@ type LanguageVersion(versionText, ?disabledFeaturesArray: LanguageFeature array)
                 LanguageFeature.ImplicitDIMCoverage, languageVersion110
                 LanguageFeature.ErrorOnMissingSignatureAttribute, previewVersion // Opt-in: turn FS3888 from warning into error
                 LanguageFeature.AccessProtectedBaseFieldFromClosure, previewVersion // #5302: read a protected base field from a closure
+                LanguageFeature.AnonUnions, previewVersion
             ]
 
     static let defaultLanguageVersion = LanguageVersion("default")
@@ -378,6 +380,7 @@ type LanguageVersion(versionText, ?disabledFeaturesArray: LanguageFeature array)
         | LanguageFeature.NullableOptionalInterop -> FSComp.SR.featureNullableOptionalInterop ()
         | LanguageFeature.DefaultInterfaceMemberConsumption -> FSComp.SR.featureDefaultInterfaceMemberConsumption ()
         | LanguageFeature.WitnessPassing -> FSComp.SR.featureWitnessPassing ()
+        | LanguageFeature.AnonUnions -> FSComp.SR.featureAnonUnions ()
         | LanguageFeature.AdditionalTypeDirectedConversions -> FSComp.SR.featureAdditionalImplicitConversions ()
         | LanguageFeature.InterfacesWithMultipleGenericInstantiation -> FSComp.SR.featureInterfacesWithMultipleGenericInstantiation ()
         | LanguageFeature.StringInterpolation -> FSComp.SR.featureStringInterpolation ()

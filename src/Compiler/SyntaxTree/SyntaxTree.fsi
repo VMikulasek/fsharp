@@ -499,6 +499,9 @@ type SynType =
     /// F# syntax: struct {| id: type; ...; id: type |}
     | AnonRecd of isStruct: bool * fields: (Ident * SynType) list * range: range
 
+    /// F# syntax: (type1 | ... | typeN)
+    | AnonUnion of anonUnionCases: SynAnonUnionCase list * range: range
+
     /// F# syntax: type[]
     | Array of rank: int * elementType: SynType * range: range
 
@@ -1439,6 +1442,15 @@ type SynUnionCase =
         accessibility: SynAccess option *
         range: range *
         trivia: SynUnionCaseTrivia
+
+    /// Gets the syntax range of this construct
+    member Range: range
+
+/// Represents the syntax tree for one case in an anonymous union definition.
+[<NoEquality; NoComparison>]
+type SynAnonUnionCase =
+
+    | SynAnonUnionCase of typ: SynType * xmlDoc: PreXmlDoc * range: range
 
     /// Gets the syntax range of this construct
     member Range: range

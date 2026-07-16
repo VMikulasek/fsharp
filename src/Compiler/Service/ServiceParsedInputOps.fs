@@ -715,6 +715,7 @@ module ParsedInput =
             | SynType.StaticConstantExpr(e, _) -> walkExpr e
             | SynType.StaticConstantNamed(ident, value, _) -> List.tryPick walkType [ ident; value ]
             | SynType.Intersection(types = types) -> List.tryPick walkType types
+            | SynType.AnonUnion(cases, _) -> cases |> List.tryPick (fun (SynAnonUnionCase(typ, _, _)) -> walkType typ)
             | SynType.StaticConstantNull _
             | SynType.Anon _
             | SynType.AnonRecd _
@@ -2010,6 +2011,7 @@ module ParsedInput =
                 walkType ident
                 walkType value
             | SynType.Intersection(types = types) -> List.iter walkType types
+            | SynType.AnonUnion(cases, _) -> cases |> List.iter (fun (SynAnonUnionCase(typ, _, _)) -> walkType typ)
             | SynType.StaticConstantNull _
             | SynType.Anon _
             | SynType.AnonRecd _

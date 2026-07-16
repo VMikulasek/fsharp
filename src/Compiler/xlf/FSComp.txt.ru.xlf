@@ -167,6 +167,11 @@
         <target state="translated">Подписывание контейнера ключей не поддерживается на этой платформе.</target>
         <note />
       </trans-unit>
+      <trans-unit id="csAnonUnionTypeNotContained">
+        <source>The anonymous union type '{0}' is not compatible with the anonymous union type '{1}'</source>
+        <target state="new">The anonymous union type '{0}' is not compatible with the anonymous union type '{1}'</target>
+        <note />
+      </trans-unit>
       <trans-unit id="csAvailableOverloads">
         <source>Available overloads:\n{0}</source>
         <target state="translated">Доступные перегрузки:\n{0}</target>
@@ -305,6 +310,11 @@
       <trans-unit id="featureAndBang">
         <source>applicative computation expressions</source>
         <target state="translated">применимые вычислительные выражения</target>
+        <note />
+      </trans-unit>
+      <trans-unit id="featureAnonUnions">
+        <source>anonymous unions</source>
+        <target state="new">anonymous unions</target>
         <note />
       </trans-unit>
       <trans-unit id="featureArithmeticInLiterals">
@@ -1480,6 +1490,11 @@
       <trans-unit id="tcAnonRecdTypeDuplicateFieldId">
         <source>The field '{0}' appears multiple times in this anonymous record type.</source>
         <target state="translated">Поле "{0}" появляется несколько раз в этом типе анонимной записи.</target>
+        <note />
+      </trans-unit>
+      <trans-unit id="tcAnonUnionCaseOverlap">
+        <source>The type '{0}' is a subtype of '{1}' and will be ignored</source>
+        <target state="new">The type '{0}' is a subtype of '{1}' and will be ignored</target>
         <note />
       </trans-unit>
       <trans-unit id="tcAttributeIsNotValidForUnionCaseWithFields">

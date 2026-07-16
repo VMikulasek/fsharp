@@ -510,13 +510,14 @@ module DeclarationListHelpers =
         | Item.Types (_, [TType_forall _]) 
         | Item.Types (_, [TType_tuple _]) 
         | Item.Types (_, [TType_ucase _]) 
+        | Item.Types (_, [TType_anon_union _])
 
         // We don't expect these cases
         | Item.Types (_, []) 
         | Item.Property (info = []) 
         | Item.UnqualifiedType []
         | Item.ModuleOrNamespaces []
-        | Item.CustomOperation (_, _, None) ->  ToolTipElement.None 
+        | Item.CustomOperation (_, _, None) ->  ToolTipElement.None
 
     /// Format the structured version of a tooltip for an item
     let FormatStructuredDescriptionOfItem isDecl infoReader ad m denv item symbol width = 
