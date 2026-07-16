@@ -1828,3 +1828,4 @@ featureExceptionFieldSerializationSupport,"emit GetObjectData and field-restorin
 featureErrorOnMissingSignatureAttribute,"error (rather than warning) when an enforced compiler-semantic attribute is present in the .fs but missing from the .fsi"
 featureAccessProtectedBaseFieldFromClosure,"Access a protected base-class field from a closure inside a member"
 featureImprovedImpliedArgumentNamesPartTwo,"Improved implied argument names with partial application"
+3891,tcAnonUnionCaseOverlap,"The type '%s' is a subtype of '%s' and will be ignored"
