@@ -1752,6 +1752,11 @@
         <target state="translated">La valeur « {0} » n’est pas une fonction et ne prend pas en charge la notation d’index.</target>
         <note />
       </trans-unit>
+      <trans-unit id="tcNullableNotAllowedInAnonymousUnion">
+        <source>The type System.Nullable&lt;'T&gt; is not allowed in an anonymous union type. Consider adding null case instead.</source>
+        <target state="new">The type System.Nullable&lt;'T&gt; is not allowed in an anonymous union type. Consider adding null case instead.</target>
+        <note />
+      </trans-unit>
       <trans-unit id="tcNullableToStringOverride">
         <source>With nullness checking enabled, overrides of .ToString() method must return a non-nullable string. You can handle potential nulls via the built-in string function.</source>
         <target state="new">With nullness checking enabled, overrides of .ToString() method must return a non-nullable string. You can handle potential nulls via the built-in string function.</target>
