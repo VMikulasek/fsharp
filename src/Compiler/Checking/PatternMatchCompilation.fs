@@ -665,7 +665,7 @@ let discrimsEq (g: TcGlobals) d1 d2 =
   | _ -> false
 
 /// Exhaustiveness of anonymous union pattern matching
-let isAnonymousUnionExhaustive g amap m constituents discrims refuted path =
+let isAnonymousUnionExhaustive g amap m constituents (nullness: Nullness) discrims refuted path =
     // Accumulate all discriminators from current and refuted sets
     let allDiscrims =
         discrims @
@@ -674,18 +674,24 @@ let isAnonymousUnionExhaustive g amap m constituents discrims refuted path =
             | RefutedInvestigation(p, ds) when pathEq p path -> ds
             | _ -> []))
 
-    constituents |> List.forall (fun constituent ->
-        allDiscrims |> List.exists (fun discrim ->
-            match discrim with
-            | DecisionTreeTest.IsInst (_, tgtTy) ->
-                TypeSubsumesTypeForExhaustiveness 0 g amap m tgtTy constituent
-            | _ -> false))
+    let hasNullCoverage =
+        allDiscrims |> List.exists (function DecisionTreeTest.IsNull -> true | _ -> false)
+
+    if not hasNullCoverage && nullness.Evaluate() = NullnessInfo.WithNull then
+        false
+    else
+        constituents |> List.forall (fun constituent ->
+            allDiscrims |> List.exists (fun discrim ->
+                match discrim with
+                | DecisionTreeTest.IsInst (_, tgtTy) ->
+                    TypeSubsumesTypeForExhaustiveness 0 g amap m tgtTy constituent
+                | _ -> false))
 
 let isAnonymousUnionAndExhaustive g amap m srcTy discrims refuted path =
     srcTy
     |> stripTyEqns g
     |> (function
-    | TType_anon_union(_, constituents) -> isAnonymousUnionExhaustive g amap m constituents discrims refuted path
+    | TType_anon_union(_, constituents, nullness) -> isAnonymousUnionExhaustive g amap m constituents nullness discrims refuted path
     | _ -> false)
 
 /// Redundancy of 'isinst' patterns
@@ -1521,6 +1527,15 @@ let CompilePatternBasic
 
         let simulSetOfDiscrims = simulSetOfCases |> List.map (fun c -> c.Discriminator)
 
+        let anonUnionSrcTyOpt =
+            (let allDiscrims =
+                simulSetOfDiscrims @
+                (refuted |> List.collect (function
+                    | RefutedInvestigation(p, ds) when pathEq p path -> ds
+                    | _ -> []))
+             allDiscrims
+             |> List.tryPick (function DecisionTreeTest.IsInst (srcTy, _) -> Some srcTy | _ -> None))
+
         let isRefuted (Frontier (_i', active, _)) =
             isMemOfActives path active &&
             let _, patAtActive = lookupActive path active
@@ -1534,7 +1549,7 @@ let CompilePatternBasic
         | DecisionTreeTest.Const (Const.SByte _) :: _  when simulSetOfCases.Length = 256 ->  None
         | DecisionTreeTest.Const Const.Unit :: _  ->  None
         | DecisionTreeTest.UnionCase (ucref, _) :: _ when  simulSetOfCases.Length = ucref.TyconRef.UnionCasesArray.Length -> None
-        | DecisionTreeTest.IsInst (srcTy, _) :: _ when isAnonymousUnionAndExhaustive g amap mExpr srcTy simulSetOfDiscrims refuted path -> None
+        | _ when anonUnionSrcTyOpt |> Option.exists (fun srcTy -> isAnonymousUnionAndExhaustive g amap mExpr srcTy simulSetOfDiscrims refuted path) -> None
         | DecisionTreeTest.ActivePatternCase _ :: _ -> error(InternalError("DecisionTreeTest.ActivePatternCase should have been eliminated", mMatch))
         | _ ->
             let fallthroughPathFrontiers = List.filter (isRefuted >> not) fallthroughPathFrontiers
