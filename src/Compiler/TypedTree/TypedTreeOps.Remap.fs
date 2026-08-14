@@ -211,10 +211,13 @@ module internal TypeRemapping =
             | Some tcrefR -> TType_ucase(UnionCaseRef(tcrefR, n), remapTypesAux tyenv tinst)
             | None -> TType_ucase(UnionCaseRef(tcref, n), remapTypesAux tyenv tinst)
 
-        | TType_anon_union(unionInfo, l) as ty ->
+        | TType_anon_union(unionInfo, l, nullness) as ty ->
             let lR = remapTypesAux tyenv l
 
-            if lR === l then ty else TType_anon_union(unionInfo, lR)
+            if lR === l then
+                ty
+            else
+                TType_anon_union(unionInfo, lR, nullness)
 
         | TType_anon(anonInfo, l) as ty ->
             let tupInfoR = remapTupInfoAux tyenv anonInfo.TupInfo
@@ -1003,7 +1006,7 @@ module internal TypeDecomposition =
 
         | TType_tuple(tupInfo, l) when eraseFuncAndTuple -> mkCompiledTupleTy g (evalTupInfoIsStruct tupInfo) l
 
-        | TType_anon_union(unionInfo, _) -> stripTyEqnsAndErase eraseFuncAndTuple g unionInfo.CommonAncestorTy
+        | TType_anon_union(unionInfo, _, _) -> stripTyEqnsAndErase eraseFuncAndTuple g unionInfo.CommonAncestorTy
 
         | ty -> ty
 
@@ -1342,7 +1345,7 @@ module internal TypeDecomposition =
         let ty = ty |> stripTyEqns g
 
         match ty with
-        | TType_anon_union(unionInfo, tys) ->
+        | TType_anon_union(unionInfo, tys, _) ->
             let sigma = unionInfo.UnsortedCaseSourceIndices
 
             let unsortedTyps =
@@ -1635,7 +1638,9 @@ module internal TypeEquivalence =
             | EraseNone -> measureAEquiv g aenv m1 m2
             | _ -> true
 
-        | TType_anon_union(_, l1), TType_anon_union(_, l2) -> ListSet.equals (typeAEquivAux erasureFlag g aenv) l1 l2
+        | TType_anon_union(_, l1, n1), TType_anon_union(_, l2, n2) ->
+            nullnessEqual aenv n1 n2
+            && ListSet.equals (typeAEquivAux erasureFlag g aenv) l1 l2
 
         | _ -> false
 

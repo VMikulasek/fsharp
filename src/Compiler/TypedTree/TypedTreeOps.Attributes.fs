@@ -1577,9 +1577,17 @@ module internal DebugPrint =
 
         | TType_tuple(_tupInfo, tys) -> sepListL (wordL (tagText "*")) (List.map (auxTypeAtomL env) tys) |> wrap
 
-        | TType_anon_union(_, tys) ->
+        | TType_anon_union(_, tys, nullness) ->
+            let caseLs = tys |> List.map (auxTypeAtomL env)
+
+            let caseLs =
+                if nullness.Evaluate() = NullnessInfo.WithNull then
+                    caseLs @ [ wordL (tagKeyword "null") ]
+                else
+                    caseLs
+
             leftL (tagText "(")
-            ^^ sepListL (wordL (tagText "|")) (List.map (auxTypeAtomL env) tys)
+            ^^ sepListL (wordL (tagText "|")) caseLs
             ^^ rightL (tagText ")")
 
         | TType_fun(domainTy, rangeTy, nullness) ->
