@@ -1062,6 +1062,11 @@ module internal TypeTesters =
         | ValueSome tcref -> isStructTyconRef tcref
         | _ -> isStructAnonRecdTy g ty || isStructTupleTy g ty
 
+    let isSystemValueTypeTy g ty =
+        match tryTcrefOfAppTy g ty with
+        | ValueSome tcref -> tyconRefEq g tcref g.system_Value_tcref
+        | _ -> false
+
     let isMeasureableValueType g ty =
         match stripTyEqns g ty with
         | TType_app(tcref, _, _) when tcref.IsMeasureableReprTycon ->
@@ -1253,6 +1258,7 @@ module internal TypeTesters =
                 | true, NullnessInfo.WithNull -> [ ty ] // with-null annotations can't be tested at runtime, Nullable<> is not part of Nullness feature as of now.
                 | _ -> if tp.IsErased then [ ty ] else []
 
+            | TType_anon_union(_, b, nullness)
             | TType_app(_, b, nullness) ->
                 match checkForNullness, nullness.Evaluate() with
                 | true, NullnessInfo.WithNull -> [ ty ]
@@ -1260,8 +1266,7 @@ module internal TypeTesters =
 
             | TType_ucase(_, b)
             | TType_anon(_, b)
-            | TType_tuple(_, b)
-            | TType_anon_union(_, b) -> List.foldBack (fun ty tys -> getErasedTypes g ty false @ tys) b []
+            | TType_tuple(_, b) -> List.foldBack (fun ty tys -> getErasedTypes g ty false @ tys) b []
 
             | TType_fun(domainTy, rangeTy, nullness) ->
                 match checkForNullness, nullness.Evaluate() with
