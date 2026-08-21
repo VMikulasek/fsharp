@@ -278,7 +278,12 @@ let tryAddNullnessToTy nullnessNew (ty:TType) =
         else 
             Some (TType_fun (d, r, nullnessAfter))
 
-    | TType_anon_union _ -> None
+    | TType_anon_union (info, tys, nullnessOrig) -> 
+        let nullnessAfter = combineNullness nullnessOrig nullnessNew
+        if nullnessEquiv nullnessAfter nullnessOrig then
+            Some ty
+        else 
+            Some (TType_anon_union (info, tys, nullnessAfter))
     | TType_forall _ -> None
     | TType_measure _ -> None
 
@@ -297,6 +302,7 @@ let addNullnessToTy (nullness: Nullness) (ty:TType) =
         else 
             TType_app (tcr, tinst, combineNullness nullnessOrig nullness)
     | TType_fun (d, r, nullnessOrig) -> TType_fun (d, r, combineNullness nullnessOrig nullness)
+    | TType_anon_union (info, tys, nullnessOrig) -> TType_anon_union (info, tys, combineNullness nullnessOrig nullness)
     | _ -> ty
 
 let rec stripTyparEqnsAux nullness0 canShortcut ty = 
@@ -335,6 +341,7 @@ let replaceNullnessOfTy nullness (ty:TType) =
     | TType_var (tp, _) -> TType_var (tp, nullness)
     | TType_app (tcr, tinst, _) -> TType_app (tcr, tinst, nullness)
     | TType_fun (d, r, _) -> TType_fun (d, r, nullness)
+    | TType_anon_union (info, tys, _) -> TType_anon_union (info, tys, nullness)
     | sty -> sty
 
 /// Detect a use of a nominal type, including type abbreviations.
