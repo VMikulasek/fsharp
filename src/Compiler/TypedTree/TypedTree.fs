@@ -4638,6 +4638,8 @@ type TType =
     /// Indicates the type is a variable type, whether declared, generalized or an inference type parameter  
     | TType_var of typar: Typar * nullness: Nullness
 
+    | TType_anon_union of unionInfo: AnonUnionInfo * choices: TTypes * nullness: Nullness
+
     /// Indicates the type is a unit-of-measure expression being used as an argument to a type or member
     | TType_measure of measure: Measure
 
@@ -4655,6 +4657,7 @@ type TType =
         | TType_ucase (_uc, _tinst) ->
             let (TILObjectReprData(scope, _nesting, _definition)) = _uc.Tycon.ILTyconInfo
             scope.QualifiedName
+        | TType_anon_union _ -> ""
 
     [<DebuggerBrowsable(DebuggerBrowsableState.Never)>]
     member x.DebugText = x.LimitedToString(4)
@@ -4680,6 +4683,7 @@ type TType =
             | None -> tp.DisplayName
             | Some t -> tp.DisplayName + $" (solved: {if maxDepth < 0 then Boolean.TrueString else t.LimitedToString(maxDepth-1)})"
         | TType_measure ms -> ms.ToString()
+        | TType_anon_union (_, l, nullness) -> "( " + String.concat " | " (List.map string l) + (if nullness.Evaluate() = NullnessInfo.WithNull then " | null )" else " )")
 
     override x.ToString() = x.LimitedToString(4)
 
@@ -4762,6 +4766,22 @@ type AnonRecdTypeInfo =
     member x.DisplayNameCoreByIdx idx = x.SortedNames[idx]
 
     member x.DisplayNameByIdx idx = x.SortedNames[idx] |> ConvertLogicalNameToDisplayName
+
+[<RequireQualifiedAccess>]
+type AnonUnionInfo =
+    {
+        /// Common ancestor type for all cases in this union, used for ILgen
+        CommonAncestorTy: TType
+
+        /// Indeces representing order of cases they were defined in
+        UnsortedCaseSourceIndices: int[]
+    }
+    
+    static member Create(commonAncestorTy: TType, unsortedCaseSourceIndices: int[]) =
+        {
+            CommonAncestorTy = commonAncestorTy
+            UnsortedCaseSourceIndices = unsortedCaseSourceIndices
+        }
 
 [<RequireQualifiedAccess>] 
 type TupInfo = 

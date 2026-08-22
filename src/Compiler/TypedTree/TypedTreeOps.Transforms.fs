@@ -108,6 +108,8 @@ module internal XmlDocSignatures =
 
         | TType_measure _ -> "?"
 
+        | TType_anon_union(_) -> failwith "unreachable" // always erased by stripTyEqnsAndMeasureEqns
+
     and tyargsEnc g (gtpsType, gtpsMethod) args =
         match args with
         | [] -> ""
@@ -399,6 +401,7 @@ module internal NullnessAnalysis =
                     combineNullness nullness nullness2
             | TType_fun(_, _, nullness)
             | TType_var(_, nullness) -> nullness
+            | TType_anon_union(_, _, nullness) -> nullness
             | _ -> g.knownWithoutNull
 
     let changeWithNullReqTyToVariable g reqTy =
@@ -449,13 +452,11 @@ module internal NullnessAnalysis =
                     | true, Some tAbbrev -> (hasWithNullAnyWhere tAbbrev true) @ tyArgs
                     | _ -> tyArgs
 
-                | TType_tuple(_, tupTypes) ->
-                    let inner = tupTypes |> List.collect (fun t -> hasWithNullAnyWhere t false)
-                    if alreadyWrappedInOuterWithNull then ty :: inner else inner
-
+                | TType_tuple(_, tys)
                 | TType_anon(tys = tys) ->
                     let inner = tys |> List.collect (fun t -> hasWithNullAnyWhere t false)
                     if alreadyWrappedInOuterWithNull then ty :: inner else inner
+
                 | TType_fun(d, r, _) -> (hasWithNullAnyWhere d false) @ (hasWithNullAnyWhere r false)
 
                 | TType_forall _ -> []
@@ -470,6 +471,8 @@ module internal NullnessAnalysis =
                         ty :: measuresInside
                     else
                         []
+
+                | TType_anon_union _ -> [] // Anon unions are not interop-importable from C# yet -> no need to be handled
 
             hasWithNullAnyWhere ty false
         else

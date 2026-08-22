@@ -211,6 +211,20 @@ module internal TypeRemapping =
             | Some tcrefR -> TType_ucase(UnionCaseRef(tcrefR, n), remapTypesAux tyenv tinst)
             | None -> TType_ucase(UnionCaseRef(tcref, n), remapTypesAux tyenv tinst)
 
+        | TType_anon_union(unionInfo, l, nullness) as ty ->
+            let lR = remapTypesAux tyenv l
+            let commonAncestorTyR = remapTypeAux tyenv unionInfo.CommonAncestorTy
+
+            if lR === l && commonAncestorTyR === unionInfo.CommonAncestorTy then
+                ty
+            else
+                let unionInfoR =
+                    { unionInfo with
+                        CommonAncestorTy = commonAncestorTyR
+                    }
+
+                TType_anon_union(unionInfoR, lR, nullness)
+
         | TType_anon(anonInfo, l) as ty ->
             let tupInfoR = remapTupInfoAux tyenv anonInfo.TupInfo
             let lR = remapTypesAux tyenv l
@@ -998,6 +1012,8 @@ module internal TypeDecomposition =
 
         | TType_tuple(tupInfo, l) when eraseFuncAndTuple -> mkCompiledTupleTy g (evalTupInfoIsStruct tupInfo) l
 
+        | TType_anon_union(unionInfo, _, _) -> stripTyEqnsAndErase eraseFuncAndTuple g unionInfo.CommonAncestorTy
+
         | ty -> ty
 
     let stripTyEqnsAndMeasureEqns g ty = stripTyEqnsAndErase false g ty
@@ -1189,6 +1205,13 @@ module internal TypeDecomposition =
         | TType_app(tcref, _, _) -> tcref.IsFSharpEnumTycon
         | _ -> false)
 
+    let isAnonUnionTy g ty =
+        ty
+        |> stripTyEqns g
+        |> (function
+        | TType_anon_union _ -> true
+        | _ -> false)
+
     let isTyparTy g ty =
         ty
         |> stripTyEqns g
@@ -1323,6 +1346,22 @@ module internal TypeDecomposition =
         |> (function
         | TType_fun(domainTy, rangeTy, _) -> ValueSome(domainTy, rangeTy)
         | _ -> ValueNone)
+
+    let tryUnsortedAnonUnionTyCases g ty =
+        let ty = ty |> stripTyEqns g
+
+        match ty with
+        | TType_anon_union(unionInfo, tys, _) ->
+            let sigma = unionInfo.UnsortedCaseSourceIndices
+
+            let unsortedTyps =
+                tys
+                |> List.indexed
+                |> List.sortBy (fun (sortedIdx, _) -> sigma.[sortedIdx])
+                |> List.map snd
+
+            ValueSome(unsortedTyps)
+        | _ -> ValueNone
 
     let tryNiceEntityRefOfTy ty =
         let ty = stripTyparEqnsAux KnownWithoutNull false ty
@@ -1604,6 +1643,10 @@ module internal TypeEquivalence =
             match erasureFlag with
             | EraseNone -> measureAEquiv g aenv m1 m2
             | _ -> true
+
+        | TType_anon_union(_, l1, n1), TType_anon_union(_, l2, n2) ->
+            nullnessEqual aenv n1 n2
+            && ListSet.equals (typeAEquivAux erasureFlag g aenv) l1 l2
 
         | _ -> false
 
