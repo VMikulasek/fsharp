@@ -242,7 +242,8 @@ module AnonymousUnionTypes =
         |> verifyCompile
         |> shouldFail
         |> withDiagnostics [
-            (Error 4501, Line 4, Col 15, Line 4, Col 44, "The type System.Nullable<'T> is not allowed in an anonymous union type. Consider adding null case instead.")
+            (Error 4501, Line 4, Col 15, Line 4, Col 44, "The type System.Nullable<'T> is not allowed in an anonymous union type. Consider adding null case instead.");
+            (Warning 4500, Line 4, Col 8, Line 4, Col 45, "The type 'float' is a subtype of 'obj' and will be ignored")
         ]
 
     [<Theory; FileInlineData("E_AnonWithNullPosition1.fs")>]
