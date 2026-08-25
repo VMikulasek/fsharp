@@ -1011,16 +1011,20 @@ type TcTrueMatchClause =
     | Yes
     | No
 
+let TcAddNullnessToAnonUnionCommonAncestor (cenv: cenv) (env: TcEnv) (commonAncestorTy: TType) m =
+    // add nullness to common ancestor type if not value type
+    if (isStructTy cenv.g commonAncestorTy || isSystemValueTypeTy cenv.g commonAncestorTy) then
+        error(Error(FSComp.SR.tcAnonUnionNullRequiresReferenceAncestor(NicePrint.stringOfTy env.DisplayEnv commonAncestorTy), m))
+    match tryAddNullnessToTy (Nullness.Known NullnessInfo.WithNull) commonAncestorTy with
+    | Some t -> t
+    | None -> error(Error(FSComp.SR.tcAnonUnionNullRequiresReferenceAncestor(NicePrint.stringOfTy env.DisplayEnv commonAncestorTy), m))
+
 let TcAddNullnessToType (warn: bool) (cenv: cenv) (env: TcEnv) nullness innerTyC m =
     let g = cenv.g
     if g.langFeatureNullness then
         if TypeNullNever g innerTyC then
             let tyText = NicePrint.minimalRichTextOfType env.DisplayEnv innerTyC
             errorR(Error(FSComp.SR.tcTypeDoesNotHaveAnyNull(tyText), m))
-
-        if isAnonUnionTy g innerTyC then
-            let tyText = NicePrint.minimalRichTextOfType env.DisplayEnv innerTyC
-            errorR(Error(FSComp.SR.tcAnonUnionNullNotAllowed(tyText), m))
 
         match tryAddNullnessToTy nullness innerTyC with
 
@@ -1037,6 +1041,13 @@ let TcAddNullnessToType (warn: bool) (cenv: cenv) (env: TcEnv) nullness innerTyC
             //    val toObj: value: 'T option -> 'T | null when 'T : not struct (* and 'T : not null *)
             // without implying 'T is not null.  This is because it is legitimate to use this
             // function to "collapse" null and obj-null-coming-from-option using such a function.
+
+            let innerTyCWithNull =  
+                match stripTyEqns g innerTyCWithNull with  
+                | TType_anon_union(info, cases, nullness) ->  
+                    let commonAncestorTy = TcAddNullnessToAnonUnionCommonAncestor cenv env info.CommonAncestorTy m  
+                    TType_anon_union({info with CommonAncestorTy = commonAncestorTy}, cases, nullness)  
+                | _ -> innerTyCWithNull
 
             if not g.compilingFSharpCore || not (isTyparTy g innerTyC) then
                 AddCxTypeDefnNotSupportsNull env.DisplayEnv cenv.css m NoTrace innerTyC
@@ -4659,10 +4670,7 @@ and TcTypeOrMeasure kindOpt (cenv: cenv) newOk checkConstraints occ (iwsam: Warn
         NewErrorType (), tpenv
 
     | SynType.WithNull(innerTy, ambivalent, m, _) ->
-        let innerTyC, tpenv = TcTypeAndRecover cenv newOk checkConstraints occ WarnOnIWSAM.Yes env tpenv innerTy
-        let nullness = if ambivalent then KnownAmbivalentToNull else KnownWithNull
-        let tyWithNull = TcAddNullnessToType false cenv env nullness innerTyC m
-        tyWithNull, tpenv
+        TcWithNull cenv newOk checkConstraints occ env tpenv innerTy ambivalent m
 
     | SynType.MeasurePower(ty, exponent, m) ->
         TcTypeMeasurePower kindOpt cenv newOk checkConstraints occ env tpenv ty exponent m
@@ -4964,9 +4972,8 @@ and TcAnonUnionTypeOr (cenv: cenv) env (tpenv: UnscopedTyparEnv) synCases m =
                 NicePrint.stringOfTy env.DisplayEnv pt,
                 NicePrint.stringOfTy env.DisplayEnv cenv.g.obj_ty_noNulls), m))
 
-    let rec containsNestedWithNull ty =
-        match ty with
-        | SynType.Paren(inner, _) -> containsNestedWithNull inner
+    let rec containsNestedWithNull synTy =
+        match stripParenTypes synTy with
         | SynType.WithNull _ -> true
         | SynType.AnonUnion(cases, _) ->
             cases |> List.exists (fun (SynAnonUnionCase(typ = caseTy)) -> containsNestedWithNull caseTy)
@@ -5021,20 +5028,36 @@ and TcAnonUnionTypeOr (cenv: cenv) env (tpenv: UnscopedTyparEnv) synCases m =
         let sortedAnonUnionCases = List.map snd sortedIndexedAnonUnionCases
         let commonAncestorTy = getCommonAncestorOfTys g cenv.amap sortedAnonUnionCases m
 
-        if hasNullCase && (isStructTy g commonAncestorTy || isSystemValueTypeTy g commonAncestorTy) then
-            error(Error(FSComp.SR.tcAnonUnionNullRequiresReferenceAncestor(NicePrint.stringOfTy env.DisplayEnv commonAncestorTy), m))
-
         let ancestorTy =
             if hasNullCase then
-                match tryAddNullnessToTy (Nullness.Known NullnessInfo.WithNull) commonAncestorTy with
-                | Some t -> t
-                | None -> error(Error(FSComp.SR.tcAnonUnionNullRequiresReferenceAncestor(NicePrint.stringOfTy env.DisplayEnv commonAncestorTy), m))
+                TcAddNullnessToAnonUnionCommonAncestor cenv env commonAncestorTy m
             else
                 commonAncestorTy
 
         let nullness = if hasNullCase then KnownWithNull else KnownWithoutNull
         let anonUnionInfo = AnonUnionInfo.Create(ancestorTy, sigma)
         TType_anon_union(anonUnionInfo, sortedAnonUnionCases, nullness), tpenv
+
+and TcWithNull (cenv: cenv) newOk checkConstraints occ env (tpenv: UnscopedTyparEnv) innerTy ambivalent m =
+    let errorSynAnonUnion innerTyC =
+        match tryAddNullnessToTy KnownWithNull innerTyC with
+        | Some innerTyCWithNull ->
+            let suggestedAnonUnionText = NicePrint.minimalStringOfTypeWithNullness env.DisplayEnv innerTyCWithNull
+            error(Error(FSComp.SR.tcAnonUnionNullNotAllowed(suggestedAnonUnionText), m))
+        | _ -> ()
+    
+    let isSynAnonUnion =
+        match stripParenTypes innerTy with
+        | SynType.AnonUnion _ -> true
+        | _ -> false
+    
+    let innerTyC, tpenv = TcTypeAndRecover cenv newOk checkConstraints occ WarnOnIWSAM.Yes env tpenv innerTy
+    if isSynAnonUnion then
+        errorSynAnonUnion innerTyC
+
+    let nullness = if ambivalent then KnownAmbivalentToNull else KnownWithNull
+    let tyWithNull = TcAddNullnessToType false cenv env nullness innerTyC m
+    tyWithNull, tpenv
 
 and TcMeasure (cenv: cenv) newOk checkConstraints occ env (tpenv: UnscopedTyparEnv) (StripParenTypes ty) m =
     match ty with
