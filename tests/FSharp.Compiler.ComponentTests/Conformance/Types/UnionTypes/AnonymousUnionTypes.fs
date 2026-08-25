@@ -198,7 +198,6 @@ module AnonymousUnionTypes =
         |> shouldFail
         |> withDiagnostics [
             (Error 715, Line 4, Col 27, Line 4, Col 28, "Anonymous type variables are not permitted in this declaration")
-            (Error 35, Line 4, Col 6, Line 4, Col 23, "This construct is deprecated: This type abbreviation has one or more declared type parameters that do not appear in the type being abbreviated. Type abbreviations must use all declared type parameters in the type being abbreviated. Consider removing one or more type parameters, or use a concrete type definition that wraps an underlying type, such as 'type C<'a> = C of ...'.")
         ]
 
     [<Theory; FileInlineData("E_AnonTypeInference.fs")>]
@@ -243,7 +242,6 @@ module AnonymousUnionTypes =
         |> shouldFail
         |> withDiagnostics [
             (Error 4501, Line 4, Col 15, Line 4, Col 44, "The type System.Nullable<'T> is not allowed in an anonymous union type. Consider adding null case instead.");
-            (Warning 4500, Line 4, Col 8, Line 4, Col 45, "The type 'float' is a subtype of 'obj' and will be ignored")
         ]
 
     [<Theory; FileInlineData("E_AnonWithNullPosition1.fs")>]
