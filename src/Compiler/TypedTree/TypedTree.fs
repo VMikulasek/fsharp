@@ -4802,7 +4802,7 @@ type AnonUnionInfo =
         /// Indeces representing order of cases they were defined in
         UnsortedCaseSourceIndices: int[]
     }
-    
+
     static member Create(commonAncestorTy: TType, unsortedCaseSourceIndices: int[]) =
         {
             CommonAncestorTy = commonAncestorTy
