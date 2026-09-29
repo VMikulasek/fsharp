@@ -12,6 +12,7 @@ type LanguageFeature =
     | ResumableStateMachines
     | DefaultInterfaceMemberConsumption
     | WitnessPassing
+    | AnonUnions
     | AdditionalTypeDirectedConversions
     | StringInterpolation
     | ExpandedMeasurables
