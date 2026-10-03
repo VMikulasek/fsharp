@@ -1241,6 +1241,7 @@ module internal TypeTesters =
 #if !NO_TYPEPROVIDERS
         | TType_app(tcref, _, _) -> tcref.IsProvidedErasedTycon
 #endif
+        | TType_anon_union _ -> true
         | _ -> false
 
     // Return all components of this type expression that cannot be tested at runtime
